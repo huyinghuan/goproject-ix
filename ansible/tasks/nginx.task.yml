@@ -1,0 +1,26 @@
+- name: 移除旧的upsteam文件
+  shell: |
+    if [ -f {{oldFile}} ]; then
+      mv {{oldFile}} {{oldFile}}.backup
+    fi
+- name: 上传新的upsteam文件
+  copy:
+    src: "{{src}}"
+    dest: "{{newFile}}"
+- name: 替换配置文件变量
+  shell: |
+    sed -i 's/upstreamName/{{ upstream }}/g' {{ newFile }}
+    sed -i 's/mainPort/{{ port }}/g' {{ newFile }}
+    sed -i 's/backupPort/{{ backupPort }}/g' {{ newFile }}
+- name: nginx校验配置
+  shell: nginx -t
+  register: result
+  tags: nginxTest
+- debug:
+    msg:
+      - "{{result.stdout_lines}}"
+      - "{{result.stderr_lines}}"
+  tags: nginxTest
+- name: nginx重启
+  shell: nginx -s reload
+  tags: [nginxReload, nginx-reload]

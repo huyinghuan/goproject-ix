@@ -1,0 +1,15 @@
+- name: 编译
+  tags: app
+  shell: |
+    cd ..
+    mkdir -p build
+    version=$(git describe --tags)
+    buildTime=$(date '+%Y-%m-%d %H:%M:%S')
+    argsRunMode="github.com/huyinghuan/app/config.RunMode=product"
+    env GOOS=linux GOARCH=amd64 \
+      go build -o build/app -mod=vendor \
+        -ldflags="-X 'main.Version=$version' -X 'main.BuildTime=$buildTime' -X '$argsRunMode'" main.go
+  environment:
+    PATH: /usr/local/go/bin:{{ ansible_env.PATH }}
+  args:
+    chdir: "{{ playbook_dir }}"

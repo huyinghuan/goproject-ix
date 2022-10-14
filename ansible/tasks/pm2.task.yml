@@ -1,0 +1,28 @@
+- name: pm2删除进程
+  ansible.builtin.shell: |
+    if [ "$(pm2 id {{appName}})" != "[]" ]; 
+    then 
+      pm2 delete {{appName}};
+    fi
+  args:
+    chdir: "{{workpsace}}"
+- name: 拷贝二进制文件到运行目录
+  copy:
+    src: "{{bin_latest_path}}"
+    dest: "{{bin_now_path}}"
+    remote_src: true
+    force: true
+    mode: 0777
+- name: pm2重启进程
+  ansible.builtin.shell: |
+    now=$(date +%Y%m%d%H%M%S)
+    if [ -f start.log ]; then
+      mv start.log history/start.log.$(now)
+    fi
+    pm2 start {{appName}} --name {{appName}} -l start.log --interpreter none -- -port {{port}} -log 1
+    pm2 save
+  args:
+    chdir: "{{workpsace}}"
+  register: result
+- ansible.builtin.debug:
+    msg: "{{result.stdout_lines}}"

@@ -1,0 +1,7 @@
+app
+go_build_*
+*.log
+static
+__debug_bin
+build
+vendor

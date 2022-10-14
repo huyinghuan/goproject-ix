@@ -1,0 +1,85 @@
+- name: 部署
+  tags: [deploy]
+  hosts: "server"
+  roles:
+    - compile
+  vars:
+    upstream: example_com
+    projectName: myapp_ansible
+    projectNameBackup: myapp_backup_ansible
+    runtimeDir: /www/wwwroot/ansible-runtime
+    bin_latest_path: "{{runtimeDir}}/{{projectName}}/{{projectName}}_latest"
+    nginx_status: ""
+    mainPort: 6800
+    mainPortBackup: 7800
+  tasks:
+    - name: 创建目录
+      file:
+        path: "{{item}}"
+        state: directory
+      loop:
+        - "{{runtimeDir}}/{{projectName}}"
+        - "{{runtimeDir}}/{{projectNameBackup}}"
+    - name: 二进制文件上传
+      tags: upload
+      copy:
+        src: ../build/app
+        dest: "{{bin_latest_path}}"
+        mode: 777
+    - name: nginx-status
+      tags: upstream_check
+      shell: |
+        if [ -f '{{  upstream }}.upstream.conf' ]; then
+          echo "main"
+        elif [ -f '{{ upstream }}.upstream.switch.conf' ]; then
+          echo "backup"
+        else
+          echo "main"
+        fi
+      register: nginx_check_result
+      args:
+        chdir: /etc/nginx/conf.d
+    - set_fact:
+        nginx_status: "{{nginx_check_result.stdout}}"
+      tags: upstream_check
+    - debug:
+        msg: "{{nginx_status}}"
+      tags: upstream_check
+    - set_fact:
+        appName: "{{projectName}}"
+        bin_now_path: "{{runtimeDir}}/{{projectName}}/{{projectName}}"
+        workpsace: "{{runtimeDir}}/{{projectName}}"
+        port: "{{ mainPort }}"
+        backupPort: "{{ mainPortBackup }}"
+        src: "domain.upstream.conf"
+        newFile: "/etc/nginx/conf.d/{{  upstream }}.upstream.conf"
+        oldFile: "/etc/nginx/conf.d/{{  upstream }}.upstream.switch.conf"
+      when: nginx_status == "backup"
+      tags: upstream_check
+    - set_fact:
+        appName: "{{projectNameBackup}}"
+        bin_now_path: "{{runtimeDir}}/{{projectNameBackup}}/{{projectNameBackup}}"
+        workpsace: "{{runtimeDir}}/{{projectNameBackup}}"
+        port: "{{ mainPortBackup }}"
+        backupPort: "{{ mainPort }}"
+        src: "domain.upstream.conf"
+        newFile: /etc/nginx/conf.d/{{  upstream }}.upstream.switch.conf
+        oldFile: /etc/nginx/conf.d/{{  upstream }}.upstream.conf
+      when: nginx_status == "main"
+      tags: upstream_check
+    - name: pm2进程管理-{{appName}}
+      import_tasks: tasks/pm2.task.yml
+    - name: nginx修改upstream
+      import_tasks: tasks/nginx.task.yml
+      become: true
+    - name:
+      shell: |
+        cat {{newFile}}
+        cd {{workpsace}}
+        tail start.log -n 20
+      tags: [upstream_check, logs]
+      register: result
+    - debug: var=result.stdout_lines
+      tags: [upstream_check, logs]
+# scp docs/pay.yml assistant:/home/www/wwwroot/docs/pay.yml
+# scp docs/pay.yml assistant:/home/www/wwwroot/docs/pay.yaml
