@@ -24,11 +24,11 @@ func InitMysql(conf istorage.IDBConfig, names ...string) {
 	if _, ok := enginPool[name]; ok {
 		return
 	}
-	conn, connectErr := xorm.NewEngine(conf.GetDriver(), conf.GetDriver())
-	conn.ShowSQL(conf.GetShowSQL())
+	conn, connectErr := xorm.NewEngine(conf.GetDriver(), conf.GetConnect())
 	if connectErr != nil {
 		panic(connectErr)
 	}
+	conn.ShowSQL(conf.GetShowSQL())
 	conn.SetLogger(logXorm.XormLogger(gologger.GetSingleInstance()))
 	conn.SetLogLevel(2) // warning
 	enginPool[name] = conn

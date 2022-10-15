@@ -1,6 +1,6 @@
 db:
   driver: mysql
-  connect: ""
+  connect: "root:12345678@tcp(127.0.0.1:3306)/jx3box_wiki"
   show_sql: true
 redis:
   url: 127.0.0.1:6379
