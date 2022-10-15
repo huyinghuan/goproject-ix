@@ -7,4 +7,3 @@ redis:
   db: 1
 corsAllowedOrigins:
   - "https://exmaple.com"
-  - "https://jx3box.com"
